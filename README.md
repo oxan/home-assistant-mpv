@@ -1,10 +1,16 @@
 # mpv integration for Home Assistant
 
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+
 An Home Assistant Media Player integration for the [mpv][mpv] media player, using mpv's [JSON IPC][mpv-ipc] API.
 
-## Installation
+## Setup
 
-Clone the `custom_components/mpv` directory into your Home Assistant config directory.
+### Installation
+
+The integration can be installed by adding it as a custom repository to [HACS][hacs]. In Home Assistant, navigate to
+HACS > Integrations > Custom repositories (in the top-right menu). Under Repository enter `oxan/home-assistant-mpv`,
+and under Category select Integration. The integration should now appear in HACS.
 
 ### Configuration
 
@@ -21,7 +27,8 @@ media_player:
       path: /path/to/mpv-socket
 ```
 
-Enjoy!
+Restart Home Assistant and enjoy!
 
+[hacs]: https://hacs.xyz/
 [mpv]: https://mpv.io/
 [mpv-ipc]: https://mpv.io/manual/stable/#json-ipc
