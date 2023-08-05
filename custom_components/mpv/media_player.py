@@ -86,7 +86,6 @@ class MpvEntity(MediaPlayerEntity):
 
     async def _connect(self) -> None:
         async def disconnect_handler(*_):
-            print('unavailable!')
             self._attr_available = False
             self.schedule_update_ha_state()
 
@@ -123,7 +122,6 @@ class MpvEntity(MediaPlayerEntity):
             await self._mpv.watch_property(MPVProperty.DURATION, self._on_duration_change)
             await self._mpv.watch_property(MPVProperty.TITLE, self._on_title_change)
 
-            print('set available!')
             self._attr_available = True
             self._attr_changed()
 
