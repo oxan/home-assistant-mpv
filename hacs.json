@@ -1,0 +1,7 @@
+{
+    "filename": "mpv.zip",
+    "homeassistant": "2023.8.0",
+    "name": "mpv",
+    "render_readme": true,
+    "zip_release": true
+}
