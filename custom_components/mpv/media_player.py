@@ -23,7 +23,7 @@ from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
-from .const import CONF_SERVER
+from .const import CONF_SERVER, CONF_PROXY_MEDIA
 from .mpv import MPV, MPVCommand, MPVConnection, MPVConnectionException, MPVEvent, MPVProperty
 
 _logger = logging.getLogger(__package__)
@@ -38,6 +38,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
             vol.Required(CONF_PATH): cv.string,
         }
     ),
+    vol.Optional(CONF_PROXY_MEDIA, default=True): cv.boolean,
 })
 
 
@@ -49,7 +50,7 @@ async def async_setup_platform(
 ) -> None:
     server = config[CONF_SERVER]
     add_entities([
-        MpvEntity(server.get(CONF_HOST), server.get(CONF_PORT), server.get(CONF_PATH))
+        MpvEntity(server.get(CONF_HOST), server.get(CONF_PORT), server.get(CONF_PATH), config[CONF_PROXY_MEDIA])
     ])
 
 
@@ -70,10 +71,11 @@ class MpvEntity(MediaPlayerEntity):
 
     # TODO: playlist support
 
-    def __init__(self, host: str = None, port: int = None, socket: str = None):
+    def __init__(self, host: str = None, port: int = None, socket: str = None, proxy_media: bool = True):
         self._host = host
         self._port = port
         self._socket = socket
+        self._proxy_media = proxy_media
 
         self._connect_task = None
         self._refresh_position_task = None
@@ -210,8 +212,16 @@ class MpvEntity(MediaPlayerEntity):
 
     async def async_play_media(self, media_type, media_id, **kwargs):
         if media_source.is_media_source_id(media_id):
-            play_item = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
-            url = media_source.async_process_play_media_url(self.hass, play_item.url)
+            # It'd be nicer if media_source._get_media_item() was public, but this seems to work perfectly fine
+            item = media_source.MediaSourceItem.from_uri(self.hass, media_id, self.entity_id)
+            source = item.async_media_source()  # contrary to its name, this function is not async
+            if not self._proxy_media and isinstance(source, media_source.local_source.LocalSource):
+                source_dir_id, location = source.async_parse_identifier(item)  # idem
+                path = source.async_full_path(source_dir_id, location)  # idem
+                url = str(path)
+            else:
+                play_item = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
+                url = media_source.async_process_play_media_url(self.hass, play_item.url)
         else:
             url = media_id
         return await self._mpv.command('loadfile', url)
