@@ -224,4 +224,5 @@ class MpvEntity(MediaPlayerEntity):
                 url = media_source.async_process_play_media_url(self.hass, play_item.url)
         else:
             url = media_id
-        return await self._mpv.command('loadfile', url)
+        await self._mpv.command('loadfile', url)
+        await self._mpv.set_property(MPVProperty.PAUSED, True)
