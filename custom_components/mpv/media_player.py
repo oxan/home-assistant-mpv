@@ -225,4 +225,4 @@ class MpvEntity(MediaPlayerEntity):
         else:
             url = media_id
         await self._mpv.command('loadfile', url)
-        await self._mpv.set_property(MPVProperty.PAUSED, True)
+        await self._mpv.set_property(MPVProperty.PAUSED, False)
