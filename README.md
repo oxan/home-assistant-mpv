@@ -29,6 +29,20 @@ media_player:
 
 Restart Home Assistant and enjoy!
 
+#### Playback using local paths
+
+When starting playback through Home Assistant, by default it will stream all media through its own HTTP server. If mpv
+and Home Assistant can access the media files using the same filesystem path, you can disable this and play media
+directly from the filesystem. This reduces resource usage and allows mpv to find external subtitle files.
+
+```yaml
+media_player:
+  - platform: mpv
+    server:
+      path: /path/to/mpv-socket
+    proxy_media: false
+```
+
 [hacs]: https://hacs.xyz/
 [mpv]: https://mpv.io/
 [mpv-ipc]: https://mpv.io/manual/stable/#json-ipc
