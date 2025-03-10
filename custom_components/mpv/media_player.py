@@ -16,7 +16,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
 )
-from homeassistant.const import CONF_HOST, CONF_PATH, CONF_PORT
+from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PATH, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_call_later
@@ -28,7 +28,9 @@ from .mpv import MPV, MPVCommand, MPVConnection, MPVConnectionException, MPVEven
 
 _logger = logging.getLogger(__package__)
 
+DEFAULT_NAME = 'mpv'
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Required(CONF_SERVER): vol.Any(
         {
             vol.Required(CONF_HOST): cv.string,
@@ -50,13 +52,20 @@ async def async_setup_platform(
 ) -> None:
     server = config[CONF_SERVER]
     add_entities([
-        MpvEntity(server.get(CONF_HOST), server.get(CONF_PORT), server.get(CONF_PATH), config[CONF_PROXY_MEDIA])
+        MpvEntity(
+            name=config[CONF_NAME],
+            host=server.get(CONF_HOST),
+            port=server.get(CONF_PORT),
+            socket=server.get(CONF_PATH),
+            proxy_media=config[CONF_PROXY_MEDIA]
+        )
     ])
 
 
 class MpvEntity(MediaPlayerEntity):
+    _attr_has_entity_name = True
+    _attr_name = None
     _attr_available = False
-    _attr_name = 'mpv'
     _attr_should_poll = False
     _attr_supported_features = (
         MediaPlayerEntityFeature.BROWSE_MEDIA |
@@ -69,9 +78,9 @@ class MpvEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.VOLUME_SET
     )
 
-    # TODO: playlist support
+    def __init__(self, name: str, host: str = None, port: int = None, socket: str = None, proxy_media: bool = True):
+        self._attr_name = name
 
-    def __init__(self, host: str = None, port: int = None, socket: str = None, proxy_media: bool = True):
         self._host = host
         self._port = port
         self._socket = socket
