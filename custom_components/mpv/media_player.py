@@ -162,7 +162,7 @@ class MpvEntity(MediaPlayerEntity):
 
         if self._attr_state == MediaPlayerState.PLAYING and not self._refresh_position_task:
             self._refresh_position_task = asyncio.create_task(self._refresh_position_loop())
-        elif self._refresh_position_task:
+        elif self._attr_state != MediaPlayerState.PLAYING and self._refresh_position_task:
             self._refresh_position_task.cancel()
         self._attr_changed()
 
