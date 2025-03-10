@@ -134,6 +134,16 @@ class MPVCommand(enum.StrEnum):
     PLAY = 'loadfile'
     SEEK = 'seek'
     STOP = 'stop'
+    PLAYLIST_PREVIOUS = 'playlist-prev'
+    PLAYLIST_NEXT = 'playlist-next'
+    PLAYLIST_CLEAR = 'playlist-clear'
+
+
+class MPVCommandFlags(enum.StrEnum):
+    PLAY_REPLACE = 'replace'
+    PLAY_APPEND = 'append'
+    PLAY_INSERT_NEXT = 'insert-next'
+    PLAY_INSERT_AT = 'insert-at'
 
 
 class MPVEvent(enum.StrEnum):
@@ -149,6 +159,7 @@ class MPVProperty(enum.StrEnum):
     POSITION = 'time-pos'
     TITLE = 'media-title'
     VOLUME = 'volume'
+    PLAYLIST_LOOP = 'loop-playlist'
 
 
 class MPV:
