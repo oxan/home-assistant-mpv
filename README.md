@@ -27,6 +27,15 @@ media_player:
       path: /path/to/mpv-socket
 ```
 
+Alternatively, it is also possible to connect over the network by specifying the `host` and `port` option:
+```yaml
+media_player:
+  - platform: mpv
+    server:
+      host: 192.168.1.100
+      port: 2352
+```
+
 Restart Home Assistant and enjoy!
 
 #### Playback using local paths
