@@ -12,6 +12,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     PLATFORM_SCHEMA,
+    MediaPlayerEnqueue,
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
@@ -24,7 +25,7 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
 from .const import CONF_SERVER, CONF_PROXY_MEDIA
-from .mpv import MPV, MPVCommand, MPVConnection, MPVConnectionException, MPVEvent, MPVProperty
+from .mpv import MPV, MPVCommand, MPVCommandFlags, MPVConnection, MPVConnectionException, MPVEvent, MPVProperty
 
 _logger = logging.getLogger(__package__)
 
@@ -74,6 +75,10 @@ class MpvEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.PAUSE |
         MediaPlayerEntityFeature.STOP |
         MediaPlayerEntityFeature.SEEK |
+        MediaPlayerEntityFeature.PREVIOUS_TRACK |
+        MediaPlayerEntityFeature.NEXT_TRACK |
+        MediaPlayerEntityFeature.MEDIA_ENQUEUE |
+        MediaPlayerEntityFeature.CLEAR_PLAYLIST |
         MediaPlayerEntityFeature.VOLUME_MUTE |
         MediaPlayerEntityFeature.VOLUME_SET
     )
@@ -219,7 +224,8 @@ class MpvEntity(MediaPlayerEntity):
     async def async_browse_media(self, media_content_type, media_content_id):
         return await media_source.async_browse_media(self.hass, media_content_id)
 
-    async def async_play_media(self, media_type, media_id, **kwargs):
+    async def async_play_media(self, media_type, media_id, enqueue: MediaPlayerEnqueue | None = None, **kwargs):
+        _logger.debug(f'Playing media with type={media_type} id={media_id}')
         if media_source.is_media_source_id(media_id):
             # It'd be nicer if media_source._get_media_item() was public, but this seems to work perfectly fine
             item = media_source.MediaSourceItem.from_uri(self.hass, media_id, self.entity_id)
@@ -233,5 +239,27 @@ class MpvEntity(MediaPlayerEntity):
                 url = media_source.async_process_play_media_url(self.hass, play_item.url)
         else:
             url = media_id
-        await self._mpv.command('loadfile', url)
+
+        flags = {
+            None: MPVCommandFlags.PLAY_REPLACE,
+            MediaPlayerEnqueue.ADD: MPVCommandFlags.PLAY_APPEND,
+            MediaPlayerEnqueue.NEXT: MPVCommandFlags.PLAY_INSERT_NEXT,
+            MediaPlayerEnqueue.PLAY: MPVCommandFlags.PLAY_INSERT_NEXT,
+            MediaPlayerEnqueue.REPLACE: MPVCommandFlags.PLAY_REPLACE,
+        }
+
+        await self._mpv.command(MPVCommand.PLAY, url, flags[enqueue])
+        if enqueue == MediaPlayerEnqueue.PLAY:
+            # mpv doesn't have an "insert next and play next" command, so we have to do it manually
+            await self._mpv.command(MPVCommand.PLAYLIST_NEXT)
+
         await self._mpv.set_property(MPVProperty.PAUSED, False)
+
+    async def async_media_previous_track(self) -> None:
+        await self._mpv.command(MPVCommand.PLAYLIST_PREVIOUS)
+
+    async def async_media_next_track(self) -> None:
+        await self._mpv.command(MPVCommand.PLAYLIST_NEXT)
+
+    async def async_clear_playlist(self) -> None:
+        await self._mpv.command(MPVCommand.PLAYLIST_CLEAR)
