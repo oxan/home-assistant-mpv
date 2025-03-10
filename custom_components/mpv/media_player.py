@@ -44,7 +44,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 
-async def async_setup_platform(
+def setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
     add_entities: AddEntitiesCallback,
@@ -78,7 +78,7 @@ class MpvEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.VOLUME_SET
     )
 
-    def __init__(self, name: str, host: str = None, port: int = None, socket: str = None, proxy_media: bool = True):
+    def __init__(self, name: str, host: str | None = None, port: int | None = None, socket: str | None = None, proxy_media: bool = True):
         self._attr_name = name
 
         self._host = host
