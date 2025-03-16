@@ -1,10 +1,8 @@
 from __future__ import annotations
-import asyncio
 
+import asyncio
 import logging
 from typing import Any
-from homeassistant.components.media_player.browse_media import BrowseMedia
-from homeassistant.components.media_player.const import MediaType
 
 import voluptuous as vol
 
@@ -13,7 +11,9 @@ from homeassistant.components import media_source
 from homeassistant.components.media_player import (
     PLATFORM_SCHEMA,
     MediaPlayerEnqueue,
-    MediaPlayerEntity,
+    MediaPlayerEntity
+)
+from homeassistant.components.media_player.const import (
     MediaPlayerEntityFeature,
     MediaPlayerState,
     RepeatMode,
@@ -26,7 +26,15 @@ from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.util import dt
 
 from .const import CONF_SERVER, CONF_PROXY_MEDIA
-from .mpv import MPV, MPVCommand, MPVCommandFlags, MPVConnection, MPVConnectionException, MPVEvent, MPVProperty
+from .mpv import (
+    MPV,
+    MPVCommand,
+    MPVCommandFlags,
+    MPVConnection,
+    MPVConnectionException,
+    MPVEvent,
+    MPVProperty,
+)
 
 _logger = logging.getLogger(__package__)
 
