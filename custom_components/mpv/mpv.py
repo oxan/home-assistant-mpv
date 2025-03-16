@@ -159,6 +159,8 @@ class MPVProperty(enum.StrEnum):
     POSITION = 'time-pos'
     TITLE = 'media-title'
     VOLUME = 'volume'
+    LOOP_FILE = 'loop-file'
+    LOOP_PLAYLIST = 'loop-playlist'
 
 
 class MPV:

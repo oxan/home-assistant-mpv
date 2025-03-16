@@ -16,6 +16,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
     MediaPlayerState,
+    RepeatMode,
 )
 from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PATH, CONF_PORT
 from homeassistant.core import HomeAssistant
@@ -79,6 +80,7 @@ class MpvEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.NEXT_TRACK |
         MediaPlayerEntityFeature.MEDIA_ENQUEUE |
         MediaPlayerEntityFeature.CLEAR_PLAYLIST |
+        MediaPlayerEntityFeature.REPEAT_SET |
         MediaPlayerEntityFeature.VOLUME_MUTE |
         MediaPlayerEntityFeature.VOLUME_SET
     )
@@ -137,6 +139,9 @@ class MpvEntity(MediaPlayerEntity):
 
             await self._mpv.watch_property(MPVProperty.DURATION, self._on_duration_change)
             await self._mpv.watch_property(MPVProperty.TITLE, self._on_title_change)
+
+            await self._mpv.watch_property(MPVProperty.LOOP_FILE, self._on_loop_change)
+            await self._mpv.watch_property(MPVProperty.LOOP_PLAYLIST, self._on_loop_change)
 
             self._attr_available = True
             self._attr_changed()
@@ -202,6 +207,18 @@ class MpvEntity(MediaPlayerEntity):
         self._attr_media_title = value
         self._attr_changed()
 
+    async def _on_loop_change(self, property: str, value: str) -> None:
+        loop_properties = {
+            'loop-file': RepeatMode.ONE,
+            'loop-playlist': RepeatMode.ALL,
+        }
+
+        if value:
+            self._attr_repeat = loop_properties[property]
+        elif not value and self._attr_repeat == loop_properties[property]:
+            self._attr_repeat = RepeatMode.OFF
+        self._attr_changed()
+
     async def async_mute_volume(self, mute: bool) -> None:
         await self._mpv.set_property(MPVProperty.MUTE, mute)
 
@@ -263,3 +280,7 @@ class MpvEntity(MediaPlayerEntity):
 
     async def async_clear_playlist(self) -> None:
         await self._mpv.command(MPVCommand.PLAYLIST_CLEAR)
+
+    async def async_set_repeat(self, repeat: RepeatMode) -> None:
+        await self._mpv.set_property(MPVProperty.LOOP_FILE, repeat == RepeatMode.ONE)
+        await self._mpv.set_property(MPVProperty.LOOP_PLAYLIST, repeat == RepeatMode.ALL)
