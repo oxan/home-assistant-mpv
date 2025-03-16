@@ -159,12 +159,12 @@ class MpvEntity(MediaPlayerEntity):
             self._attr_state = MediaPlayerState.BUFFERING
         else:  # TODO: check if there's actually anything playing?
             self._attr_state = MediaPlayerState.PLAYING
+        await self._refresh_position()  # also calls _attr_changed()
 
         if self._attr_state == MediaPlayerState.PLAYING and not self._refresh_position_task:
             self._refresh_position_task = asyncio.create_task(self._refresh_position_loop())
         elif self._attr_state != MediaPlayerState.PLAYING and self._refresh_position_task:
             self._refresh_position_task.cancel()
-        self._attr_changed()
 
     async def _refresh_position(self) -> None:
         self._attr_media_position = await self._mpv.get_property(MPVProperty.POSITION)
