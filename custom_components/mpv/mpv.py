@@ -4,9 +4,14 @@ import json
 import logging
 
 from collections import defaultdict
-from typing import Any, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 _logger = logging.getLogger(__package__)
+
+ConnectionEventCallback = Callable[[str, dict[str, Any]], Awaitable[None]]
+EventCallback = Callable[[dict[str, Any]], Awaitable[None]]
+PropertyCallback = Callable[[str, Any], Awaitable[None]]
 
 
 class MPVConnectionException(Exception):
@@ -14,6 +19,13 @@ class MPVConnectionException(Exception):
 
 
 class MPVConnection:
+    _event_callbacks: list[ConnectionEventCallback]
+    _event_tasks: set[asyncio.Task]
+    _request_id: int
+    _request_futures: dict[int, asyncio.Future[dict[str, Any]]]
+    _reader: asyncio.StreamReader | None
+    _writer: asyncio.StreamWriter | None
+
     def __init__(self):
         self._event_callbacks = []
         self._event_tasks = set()
@@ -53,7 +65,7 @@ class MPVConnection:
         self._reader = None
         self._writer = None
 
-    def _handle_connection_failure(self, exception: Exception = None) -> None:
+    def _handle_connection_failure(self, exception: Exception | None = None) -> None:
         _logger.error('Connection to mpv broken', exc_info=exception)
         self._reader = None
         self._writer = None
@@ -86,10 +98,10 @@ class MPVConnection:
                 event = response.pop('event')
                 self._run_event_handlers(event, response)
 
-    def add_event_callback(self, callback: Callable[[str, dict[str, Any]], None]) -> None:
+    def add_event_callback(self, callback: ConnectionEventCallback) -> None:
         self._event_callbacks.append(callback)
 
-    def remove_event_callback(self, callback: Callable[[str, dict[str, Any]], None]) -> None:
+    def remove_event_callback(self, callback: ConnectionEventCallback) -> None:
         self._event_callbacks.remove(callback)
 
     def _run_event_handlers(self, event: str, params: dict[str, Any]) -> None:
@@ -105,7 +117,7 @@ class MPVConnection:
             self._event_tasks.add(task)
             task.add_done_callback(self._event_tasks.discard)
 
-    async def command(self, command: str, *params: list[Any], response: bool = False) -> Any | None:
+    async def command(self, command: str, *params: Any, response: bool = False) -> dict[str, Any] | None:
         if not self.is_connected():
             raise MPVConnectionException('Not connected')
 
@@ -125,9 +137,9 @@ class MPVConnection:
             raise MPVConnectionException('Disconnected') from ex
 
         if response:
-            response = await self._request_futures[request_id]
+            response_value = await self._request_futures[request_id]
             del self._request_futures[request_id]
-            return response
+            return response_value
 
 
 class MPVCommand(enum.StrEnum):
@@ -164,23 +176,25 @@ class MPVProperty(enum.StrEnum):
 
 
 class MPV:
+    _event_callbacks: dict[str, list[EventCallback]]
+
     def __init__(self, connection: MPVConnection):
         self.connection = connection
         self.connection.add_event_callback(self._on_event)
         self._event_callbacks = defaultdict(list)
         self._watch_callbacks = {}
 
-    async def _on_event(self, event: str, data: dict[str, Any]):
+    async def _on_event(self, event: str, data: dict[str, Any]) -> None:
         if event == 'property-change':
             if data['id'] in self._watch_callbacks:
                 await self._watch_callbacks[data['id']](data['name'], data.get('data', None))
         if event in self._event_callbacks:
             await asyncio.gather(*(cb(data) for cb in self._event_callbacks[event]))
 
-    async def add_event_listener(self, event: str, listener: Callable[[dict[str, Any]], None]) -> None:
+    async def add_event_listener(self, event: str, listener: EventCallback) -> None:
         self._event_callbacks[event].append(listener)
 
-    async def command(self, command: str, *params: list[Any]):
+    async def command(self, command: str, *params: Any) -> None:
         await self.connection.command(command, *params)
 
     async def get_property(self, name: str) -> None:
@@ -190,7 +204,7 @@ class MPV:
     async def set_property(self, name: str, value: Any) -> None:
         await self.connection.command('set_property', name, value)
 
-    async def watch_property(self, name: str, callback: Callable[[str, dict[str, Any]], None]) -> None:
+    async def watch_property(self, name: str, callback: PropertyCallback) -> None:
         id = max(self._watch_callbacks.keys(), default=0) + 1
         self._watch_callbacks[id] = callback
         await self.connection.command('observe_property', id, name)

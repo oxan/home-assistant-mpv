@@ -18,6 +18,9 @@ from homeassistant.components.media_player.const import (
     MediaPlayerState,
     RepeatMode,
 )
+from homeassistant.components.media_player.browse_media import (
+    async_process_play_media_url
+)
 from homeassistant.const import CONF_NAME, CONF_HOST, CONF_PATH, CONF_PORT
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -92,6 +95,9 @@ class MpvEntity(MediaPlayerEntity):
         MediaPlayerEntityFeature.VOLUME_MUTE |
         MediaPlayerEntityFeature.VOLUME_SET
     )
+
+    _connection: MPVConnection
+    _mpv: MPV
 
     def __init__(self, name: str, host: str | None = None, port: int | None = None, socket: str | None = None, proxy_media: bool = True):
         self._attr_name = name
@@ -208,7 +214,7 @@ class MpvEntity(MediaPlayerEntity):
         self._attr_changed()
 
     async def _on_duration_change(self, property: str, value: float) -> None:
-        self._attr_media_duration = value
+        self._attr_media_duration = round(value)
         self._attr_changed()
 
     async def _on_title_change(self, property: str, value: str) -> None:
@@ -261,7 +267,7 @@ class MpvEntity(MediaPlayerEntity):
                 url = str(path)
             else:
                 play_item = await media_source.async_resolve_media(self.hass, media_id, self.entity_id)
-                url = media_source.async_process_play_media_url(self.hass, play_item.url)
+                url = async_process_play_media_url(self.hass, play_item.url)
         else:
             url = media_id
 
