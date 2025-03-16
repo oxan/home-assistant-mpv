@@ -15,28 +15,49 @@ and under Category select Integration. The integration should now appear in HACS
 ### Configuration
 
 Start mpv with the `input-ipc-server` option set to the socket location:
-```bash
-$ mpv --input-ipc-server=/path/to/mpv-socket
+```sh
+mpv --input-ipc-server=/path/to/mpv-socket
 ```
 
-Configure the location of the socket in Home Assistant:
+Configure the integration in the Home Assistant `configuration.yaml` file:
 ```yaml
 media_player:
   - platform: mpv
+    name: "MPV Player"
     server:
       path: /path/to/mpv-socket
 ```
 
-Alternatively, it is also possible to connect over the network by specifying the `host` and `port` option:
+Restart Home Assistant and enjoy!
+
+#### Remote mpv
+
+It is also possible to connect to a remove mpv instance over the network. First, ensure that `socat` is installed, and
+create a script that runs socat to expose the mpv socket on a network port (2352 in the following example). It is
+important that this script has the extension `.run`, and is executable (run `chmod +x socat.run`):
+```sh
+#!/bin/sh
+exec socat TCP-LISTEN:2352,fork UNIX-CONNECT:/path/to/mpv-socket
+```
+
+Start mpv with using the `--script` option to have it run the script on startup:
+```sh
+mpv --input-ipc-server=/path/to/mpv-socket --script=/path/to/socat.run
+```
+
+Finaly, configure the integration to connect over the network:
 ```yaml
 media_player:
   - platform: mpv
+    name: "MPV Player"
     server:
       host: 192.168.1.100
       port: 2352
 ```
 
-Restart Home Assistant and enjoy!
+#### Other useful mpv options
+
+You can additionally use the `--idle` mpv option to have it remain alive if no media is playing.
 
 #### Playback using local paths
 
